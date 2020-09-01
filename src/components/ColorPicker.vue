@@ -1,49 +1,75 @@
 <template>
-  <v-app :style="'background:'+color">
-    <!-- <label for="color-input" id="color-label" style="background-color: red"></label>
-    <input type="checkbox" id="color-input" checked />-->
+  <div class="text-xs-center">
+    <v-dialog v-model="dialog" width="300">
+      <template v-slot:activator="{ on }">
+        <v-btn dark v-on="on">Color Picker</v-btn>
+      </template>
 
-    <div id="color-picker">
-      <canvas
-        id="color-block"
-        @mousedown="startColorSelection"
-        @mouseup="finishColorSelection"
-        @mousemove="chooseColor"
-        height="150"
-        width="150"
-      ></canvas>
-      <canvas id="color-strip" @click="chooseGradient" height="150" width="30"></canvas>
-    </div>
-    <ColorPicker class="button" :color="color" :colors="colors" @setColor="setColor" />
-  </v-app>
+      <v-card>
+        <v-card-title primary-title>Vue Color pickers</v-card-title>
+        <div div class="color-picker">
+          <div class="color-picker-elevation d-inline-flex justify-center">
+            <label for="color-input" id="color-label" style="background-color: red"></label>
+            <input type="checkbox" id="color-input" checked />
+
+            <div id="color-picker">
+              <canvas
+                id="color-block"
+                @mousedown="startColorSelection"
+                @mouseup="finishColorSelection"
+                @mousemove="chooseColor"
+                height="150"
+                width="150"
+              ></canvas>
+              <canvas id="color-strip" @click="chooseGradient" height="150" width="30"></canvas>
+            </div>
+            <!-- <input :value="color" type="color" @change="setPickerColor($event)" /> -->
+            <input
+              class="slider"
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              @change="setOpacity($event)"
+              id="opacity"
+              value="1"
+            />
+            <!-- :style="'background:'+color" -->
+            <span>{{colorOpacity * 100 + '%'}}</span>
+          </div>
+          <!-- <v-flex xs12>
+            <v-slider :thumb-size="20"  thumb-label="always" />
+          </v-flex>-->
+
+          <div class="color-picker-swatches">
+            <div
+              class="color"
+              v-for="(color, i) in colors"
+              :key="i"
+              :style="'background:'+color"
+              @click="setSwatchesColor(color)"
+            ></div>
+          </div>
+        </div>
+        <v-card-actions class="d-inline-flex">
+          <v-spacer></v-spacer>
+          <v-btn dark @click="resetColor">Cancel</v-btn>
+          <v-btn dark @click="dialog=false">OK</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </div>
 </template>
-
 <script>
-
-import ColorPicker from '@/components/ColorPicker';
-
 export default {
-  name: 'app',
-  components: {
-    ColorPicker
-  },
+  name: 'color-picker',
+  props: ['colors', 'color'],
   data () {
     return {
-      colors: [
-        '#ef9a9a', '#e57373', '#ef5350', '#f44336', '#f48fb1',
-        '#f06292', '#ec407a', '#e91e63', '#ce93d8', '#ba68c8',
-        '#ab47bc', '#9c27b0', '#b39ddb', '#9575cd', '#7e57c2',
-        '#673AB7', '#9FA8DA', '#7986CB', '#5C6BC0', '#3F51B5',
-        '#90CAF9', '#64B5F6', '#42A5F5', '#2196F3', '#81D4FA',
-        '#4FC3F7', '#29B6F6', '#03A9F4', '#80DEEA', '#4DD0E1',
-        '#26C6DA', '#00BCD4', '#80CBC4', '#4DB6AC', '#26A69A',
-        '#009688', '#A5D6A7', '#81C784', '#66BB6A', '#4CAF50',
-        '#C5E1A5', '#AED581', '#9CCC65', '#8BC34A', '#E6EE9C',
-        '#DCE775', '#D4E157', '#CDDC39', '#FFC107', '#ffb407',
-      ],
-
-      color: '#F0F0F0',
+      dialog: false,
       colorOpacity: 1,
+      currentColor: '',
+      localValue: this.value,
       drage: false,
       rgbaColor: 'rgba(255,0,0,1)',
       pickerWidth: '',
@@ -53,14 +79,27 @@ export default {
       x: 0,
       y: 0,
       colorLabel: ''
-    }
-  },
-  mounted () {
-    this.setCanvas()
+    };
   },
   methods: {
-    setColor (color) {
-      this.color = color;
+    setSwatchesColor (color) {
+      this.$emit('setColor', this.hexToRGB(color))
+    },
+    setPickerColor (event) {
+      this.$emit('setColor', this.hexToRGB(event.target.value))
+    },
+    setOpacity (event) {
+      this.colorOpacity = event.target.value;
+    },
+    hexToRGB (color) {
+      let r = parseInt(color.slice(1, 3), 16),
+        g = parseInt(color.slice(3, 5), 16),
+        b = parseInt(color.slice(5, 7), 16);
+      return `rgba( ${r}, ${g} , ${b}, ${this.colorOpacity})`;
+    },
+    resetColor () {
+      this.$emit('setColor', '#F0F0F0')
+      this.dialog = false
     },
     setCanvas () {
       let colorBlock = document.getElementById('color-block');
@@ -133,20 +172,53 @@ export default {
       this.colorLabel.style.backgroundColor = this.rgbaColor
       this.color = this.rgbaColor
     }
-  }
+  },
 }
 </script>
-
 <style scoped>
-body {
-  margin: 0;
-  padding: 0;
-  background: #f3f3f3;
+.color-picker {
+  display: grid;
+  align-items: center;
 }
 
-#app {
-  text-align: center;
-  color: #2c3e50;
+.color-picker-elevation {
+  margin-top: 12px;
+}
+
+.color-picker-swatches {
+  width: 84%;
+  display: grid;
+  margin: 16px auto;
+  grid-template-columns: repeat(5, 52px);
+}
+.color {
+  border: 2px solid #fff;
+  height: 28px;
+  border-radius: 8px;
+}
+
+input[type='color'] {
+  -webkit-appearance: none;
+  border: none;
+  width: 52px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.slider {
+  -webkit-appearance: none;
+  width: 210px;
+  margin: auto 10px;
+  border-radius: 8px;
+  outline: none;
+  background: linear-gradient(
+    87deg,
+    rgba(202, 243, 233, 1) 10%,
+    rgba(202, 243, 233, 1) 25%,
+    rgba(141, 255, 227, 1) 40%,
+    rgba(11, 230, 209, 0.8) 60%,
+    rgba(23, 179, 164, 0.9) 89%
+  );
 }
 
 h2 {
@@ -190,4 +262,3 @@ canvas:hover {
   cursor: crosshair;
 }
 </style>
-
